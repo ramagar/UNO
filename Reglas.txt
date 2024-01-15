@@ -1,0 +1,45 @@
+REGLAS
+
+Las reglas del UNO son las mismas de siempre, lo único que cambia es la manera de sumar los puntos. La idea del programa es generar esa sumatoria de puntos de manera simple.
+Cada vez que un jugador corta los demás jugadores muestran sus cartas y suman el total de puntos de las cartas de su mano.
+El juego termina cuando un jugador supera el puntaje máximo o el mínimo, en esos casos se determina un perdedor.
+
+
+COMO SE SUMAN LOS PUNTOS:
+
+Los puntos se suman de dos maneras distintas según el tipo de ronda que se juegue:
+
+> Ronda Normal: el jugador que corta suma el total de puntos que sumaron los demás jugadores en esa mano, los demás jugadores restan la mitad de los puntos propios que sumaron en esa mano.
+
+> Ronda Especial: el jugador que corta suma el 120% de los puntos que sumaron los demás jugadores en esa mano, los demás jugadores restan el total de puntos propios que sumo en esa mano. Cada ronda tiene un 25% de posibilidades de ser una ronda especial.
+
+
+
+EJEMPLOS
+
+~ (Ronda Normal) ~
+
+Jugador 1 ==> Corta | Jugador 2 ==> Sus cartas suman 50pts | Jugador 3 ==> Sus cartas suman 10pts
+
+- Quien gano la mano? Jugador 1
+- Cuanto suma la mano de Jugador 1: 0pts
+- Cuantos suma la mano de Jugador 2: 50pts
+- Cuantos suma la mano de Jugador 3: 10pts
+
+PUNTUACION DESPUES DE SUMAR LOS PUNTOS:
+
+Jugador 1: 60pts (50pts + 10pts) | Jugador 2: -25pts (-50pts / 2) | Jugador 3: -5pts (-10pts / 2)
+
+
+~ (Ronda Especial) ~
+
+Jugador 1 ==> Corta | Jugador 2 ==> Sus cartas suman 50pts | Jugador 3 ==> Sus cartas suman 10pts
+
+- Quien gano la mano? Jugador 1
+- Cuanto suma la mano de Jugador 1: 0pts
+- Cuantos suma la mano de Jugador 2: 50pts
+- Cuantos suma la mano de Jugador 3: 10pts
+
+PUNTUACION DESPUES DE SUMAR LOS PUNTOS:
+
+Jugador 1: 72pts ((50pts + 10pts) * 1.2) | Jugador 2: -50pts (-50pts) | Jugador 3: -10pts (-10pts)
