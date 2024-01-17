@@ -1,9 +1,22 @@
 from Jugador import Jugador
 from Ronda import Ronda
-from random import choice, random
+from random import choice
 import matplotlib.pyplot as plt
 from os import system
-import csv
+import mysql.connector
+
+def manejar_conexion(func):
+    def wrapper(self, *args, **kwargs):
+        config = {'user': 'root', 'password': '', 'host': 'localhost', 'database': 'uno'}
+        conexion = mysql.connector.connect(**config)
+        try:
+            cursor = conexion.cursor()
+            func(self, cursor, *args, **kwargs)
+            conexion.commit()
+        finally:
+            cursor.close()
+            conexion.close()
+    return wrapper
 
 class Uno():
     '''
@@ -52,7 +65,11 @@ class Uno():
     def __setApuesta(self) -> None:
         '''Metodo que define la apuesta por la que se juega'''
         system('cls')
-        self.__laApuesta = input('Escribir que es lo que se apuesta: ')
+        apuesta = input('Escribir que es lo que se apuesta: ').capitalize()
+        if apuesta.isspace() or not apuesta.isprintable or apuesta == '':
+            self.__setApuesta()
+        else:
+            self.__laApuesta = apuesta  
         system('cls')
         
     def __setCantidadJugadores(self) -> None:
@@ -227,7 +244,7 @@ class Uno():
     def __mostrarGrafico(self) -> None:
         '''Metodo que muestra el grafico de los puntajes'''
         if self.__laRonda.getNumeroRonda() == 2:
-            self.__coloresJugadores = ['red', 'cyan', 'pink', 'green', 'orange', 'purple', 'brown', 'gray', 'lightblue'][:self.__cantidadJugadores]
+            self.__coloresJugadores = ['blue', 'red', 'pink', 'green', 'orange', 'purple', 'brown', 'gray', 'lightblue'][:self.__cantidadJugadores]
         fig, ax = plt.subplots(figsize=(6.5, 9))
         ax.set_ylim(self.__puntajeMinimo, self.__puntajeMaximo)
         ax.bar([jugador.getNombre() for jugador in self.__losJugadores], [jugador.getPuntos() for jugador in self.__losJugadores], label=[jugador.getNombre() for jugador in self.__losJugadores], color= self.__coloresJugadores)
@@ -241,12 +258,36 @@ class Uno():
         plt.get_current_fig_manager().window.wm_geometry("+707+0")
         plt.show(block=False)
 
-        
-    def __guardarResultado(self) -> None:
-        '''Metodo que guarda los resultados en un excel dentro de la carpeta de ejecucion y termina el juego'''
-        with open('resultados.csv', 'a', newline='') as archivo:
-            csv.writer(archivo).writerow([f'{self.__elPerdedor} =====> {self.__laApuesta}'])
-        input('Toca Enter para terminar el juego')
+    @manejar_conexion
+    def __guardarResultado(self, cursor) -> None:
+        '''Método que guarda los resultados en una base de datos'''
+        consulta = f"INSERT INTO puntajes (Nombre, Apuesta) VALUES ('{self.__elPerdedor}', '{self.__laApuesta}');"
+        cursor.execute(consulta)
+    
+    @manejar_conexion
+    def __mostrarHistorialGrafico(self, cursor) -> None:
+        '''Método que muestra el historial de derrotas con un gráfico de torta'''
+        input('\nToca ENTER para ver el historial gráfico...')
+        consulta = "SELECT nombre, COUNT(*) AS perdidas FROM puntajes GROUP BY nombre;"
+        cursor.execute(consulta)
+        resultados = cursor.fetchall()
+        fig, ax = plt.subplots(figsize=(6.5, 6.5))
+        ax.pie([resultado[1] for resultado in resultados], labels=[f"{nombre}: {perdidas}" for nombre, perdidas in resultados], startangle=140)
+        ax.set_title('Historial de derrotas')
+        plt.get_current_fig_manager().window.wm_geometry("+707+0")
+        plt.show(block=False)
+            
+    @manejar_conexion
+    def __mostrarHistorialEscrito(self, cursor) -> None:
+        '''Método que muestra el historial de derrotas con todas las apuestas por escrito'''
+        system('cls')
+        if input('Mostrar historial escrito? [y/n]: ').upper() == 'Y':
+            consulta = "SELECT * FROM puntajes;"
+            cursor.execute(consulta)
+            resultados = cursor.fetchall()
+            print('Nombre ==> Apuesta\n\n')
+            for nombre, apuesta in resultados:
+                print(f"{nombre.capitalize()} ==> {apuesta}\n")
 
     def jugar(self):
         '''Metodo para jugar al Uno'''
@@ -268,10 +309,13 @@ class Uno():
         self.__mostrarResultados()
         self.__mostrarGrafico()
         self.__guardarResultado()
+        self.__mostrarHistorialGrafico()
+        self.__mostrarHistorialEscrito()
 
 def main():
     '''Funcion que inicializa el juego y lo termina una vez que se determina un perdedor'''
     Uno().jugar()
+    input('\n\nToca ENTER para terminar el juego...')
     
 if __name__ == '__main__':
     main()
