@@ -1,17 +1,18 @@
 from Jugador import Jugador
 from Ronda import Ronda
 from random import choice
-import matplotlib.pyplot as plt
 from os import system
+import matplotlib.pyplot as plt
 import mysql.connector
 
 def manejar_conexion(func):
-    def wrapper(self, *args, **kwargs):
+    '''Funcion para manejar la conexion con la base de datos'''
+    def wrapper(self):
         config = {'user': 'root', 'password': '', 'host': 'localhost', 'database': 'uno'}
         conexion = mysql.connector.connect(**config)
         try:
             cursor = conexion.cursor()
-            func(self, cursor, *args, **kwargs)
+            func(self, cursor)
             conexion.commit()
         finally:
             cursor.close()
@@ -261,19 +262,45 @@ class Uno():
     @manejar_conexion
     def __guardarResultado(self, cursor) -> None:
         '''Método que guarda los resultados en una base de datos'''
-        consulta = f"INSERT INTO puntajes (Nombre, Apuesta) VALUES ('{self.__elPerdedor}', '{self.__laApuesta}');"
-        cursor.execute(consulta)
+        consulta_guardar = f'''
+        INSERT INTO puntajes (Nombre, Apuesta) 
+        VALUES ('{self.__elPerdedor}', '{self.__laApuesta}');
+        '''
+        cursor.execute(consulta_guardar)
+        
+        for jugador in self.__losJugadores:
+            consulta_actualizar = f'''
+            UPDATE partidasjugadas
+            SET cantidad = cantidad + 1
+            WHERE nombre = '{jugador.getNombre()}';
+            '''
+            cursor.execute(consulta_actualizar)
+            
+            if cursor.rowcount == 0:
+                consulta_insertar = f'''
+                INSERT INTO partidasjugadas (nombre, cantidad)
+                VALUES ('{jugador.getNombre()}', 1);
+                '''
+                cursor.execute(consulta_insertar)
     
     @manejar_conexion
     def __mostrarHistorialGrafico(self, cursor) -> None:
         '''Método que muestra el historial de derrotas con un gráfico de torta'''
         input('\nToca ENTER para ver el historial gráfico...')
-        consulta = "SELECT nombre, COUNT(*) AS perdidas FROM puntajes GROUP BY nombre;"
+        
+        consulta = """
+        SELECT p.nombre, COUNT(*) AS perdidas, o.cantidad
+        FROM puntajes AS p
+        LEFT JOIN partidasjugadas AS o 
+        ON p.nombre = o.nombre
+        GROUP BY p.nombre, o.cantidad;
+        """
         cursor.execute(consulta)
         resultados = cursor.fetchall()
+        
         fig, ax = plt.subplots(figsize=(6.5, 6.5))
-        ax.pie([resultado[1] for resultado in resultados], labels=[f"{nombre}: {perdidas}" for nombre, perdidas in resultados], startangle=140)
-        ax.set_title('Historial de derrotas')
+        ax.pie([resultado[1] for resultado in resultados], labels=[f"{nombre} ({int((perdidas*100)/cantidad)}%)\n{perdidas} derrotas" for nombre, perdidas, cantidad in resultados], startangle=140)
+        ax.set_title(f'Historial de derrotas (porcentaje de derrotas %): {sum([perdidas[1] for perdidas in resultados])}')
         plt.get_current_fig_manager().window.wm_geometry("+707+0")
         plt.show(block=False)
             
@@ -281,13 +308,12 @@ class Uno():
     def __mostrarHistorialEscrito(self, cursor) -> None:
         '''Método que muestra el historial de derrotas con todas las apuestas por escrito'''
         system('cls')
-        if input('Mostrar historial escrito? [y/n]: ').upper() == 'Y':
-            consulta = "SELECT * FROM puntajes;"
-            cursor.execute(consulta)
-            resultados = cursor.fetchall()
-            print('Nombre ==> Apuesta\n\n')
-            for nombre, apuesta in resultados:
-                print(f"{nombre.capitalize()} ==> {apuesta}\n")
+        consulta = "SELECT * FROM puntajes;"
+        cursor.execute(consulta)
+        resultados = cursor.fetchall()
+        print('Nombre ==> Apuesta\n\n')
+        for nombre, apuesta in resultados:
+            print(f"{nombre.capitalize()} ==> {apuesta}\n")
 
     def jugar(self):
         '''Metodo para jugar al Uno'''
@@ -316,6 +342,6 @@ def main():
     '''Funcion que inicializa el juego y lo termina una vez que se determina un perdedor'''
     Uno().jugar()
     input('\n\nToca ENTER para terminar el juego...')
-    
+        
 if __name__ == '__main__':
     main()
