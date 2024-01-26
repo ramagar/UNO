@@ -1,7 +1,10 @@
+from os import system, chdir, path
+ruta_script = path.dirname(path.abspath(__file__))
+chdir(ruta_script)
+
 from Jugador import Jugador
 from Ronda import Ronda
 from random import choice
-from os import system
 import matplotlib.pyplot as plt
 import mysql.connector
 
